@@ -814,6 +814,28 @@
                     <label>Gist ID（可选，留空自动创建）</label>
                     <input type="text" class="input" id="github-gist-id" placeholder="">
                 </div>
+                <div style="border-top: 1px solid var(--border); margin: 16px 0; padding-top: 16px;">
+                    <div style="font-weight: 600; font-size: 13px; margin-bottom: 10px; color: var(--accent-light);">&#127760; 代码自动备份到 GitHub 仓库</div>
+                    <div class="form-group">
+                        <label>仓库所有者 (Owner)</label>
+                        <input type="text" class="input" id="github-repo-owner" placeholder="如: yourname">
+                    </div>
+                    <div class="form-group">
+                        <label>仓库名 (Repo)</label>
+                        <input type="text" class="input" id="github-repo-name" placeholder="如: ai-workbench">
+                    </div>
+                    <div class="form-group">
+                        <label>分支 (Branch)</label>
+                        <input type="text" class="input" id="github-repo-branch" placeholder="main">
+                    </div>
+                    <div class="form-group">
+                        <label>文件路径</label>
+                        <input type="text" class="input" id="github-repo-path" placeholder="ai-workbench.html">
+                    </div>
+                    <small style="color: var(--text-muted); display: block; margin-bottom: 10px;">
+                        配置后，点击「上传云端」会自动把当前代码提交到该仓库，相当于 git push
+                    </small>
+                </div>
                 <div style="display: flex; gap: 10px; margin-top: 16px;">
                     <button class="btn btn-primary" style="flex:1" onclick="CloudSync.upload()">&#11014; 上传云端</button>
                     <button class="btn btn-accent" style="flex:1" onclick="CloudSync.download()">&#11015; 下载云端</button>
@@ -863,6 +885,15 @@
 
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function showTokenModal() {
+            document.getElementById('github-token').value = CloudSync.getToken() || '';
+            document.getElementById('github-gist-id').value = CloudSync.getGistId() || '';
+            document.getElementById('github-repo-owner').value = CloudSync.getRepoOwner() || '';
+            document.getElementById('github-repo-name').value = CloudSync.getRepoName() || '';
+            document.getElementById('github-repo-branch').value = CloudSync.getRepoBranch() || 'main';
+            document.getElementById('github-repo-path').value = CloudSync.getRepoPath() || 'ai-workbench.html';
+            openModal('token-modal');
+        }
 
         // ==================== 任务管理 ====================
         let tasks = Storage.get('tasks');
@@ -1172,29 +1203,88 @@
         const CloudSync = {
             tokenKey: 'github_gist_token',
             gistIdKey: 'github_gist_id',
+            repoOwnerKey: 'github_repo_owner',
+            repoNameKey: 'github_repo_name',
+            repoBranchKey: 'github_repo_branch',
+            repoPathKey: 'github_repo_path',
             getToken() { return localStorage.getItem(this.tokenKey); },
             setToken(t) { localStorage.setItem(this.tokenKey, t); },
             getGistId() { return localStorage.getItem(this.gistIdKey); },
             setGistId(id) { localStorage.setItem(this.gistIdKey, id); },
+            getRepoOwner() { return localStorage.getItem(this.repoOwnerKey); },
+            setRepoOwner(v) { localStorage.setItem(this.repoOwnerKey, v); },
+            getRepoName() { return localStorage.getItem(this.repoNameKey); },
+            setRepoName(v) { localStorage.setItem(this.repoNameKey, v); },
+            getRepoBranch() { return localStorage.getItem(this.repoBranchKey) || 'main'; },
+            setRepoBranch(v) { localStorage.setItem(this.repoBranchKey, v); },
+            getRepoPath() { return localStorage.getItem(this.repoPathKey) || 'ai-workbench.html'; },
+            setRepoPath(v) { localStorage.setItem(this.repoPathKey, v); },
+            hasRepoConfig() {
+                return !!(this.getRepoOwner() && this.getRepoName());
+            },
             async upload() {
                 const token = this.getToken();
                 if (!token) { showNotification('同步失败', '请先配置 GitHub Token', 'error'); return; }
+                // 1. 同步数据到 Gist
                 const data = { tasks, skills, inspirations, updatedAt: nowStr() };
                 const gistId = this.getGistId();
-                const url = gistId ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';
-                const method = gistId ? 'PATCH' : 'POST';
+                const gistUrl = gistId ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';
+                const gistMethod = gistId ? 'PATCH' : 'POST';
                 try {
-                    const res = await fetch(url, {
-                        method, headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                    const gistRes = await fetch(gistUrl, {
+                        method: gistMethod, headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ description: 'AI Workbench Sync', public: false,
                             files: { 'workbench-data.json': { content: JSON.stringify(data, null, 2) } }
                         })
                     });
-                    const json = await res.json();
-                    if (!res.ok) throw new Error(json.message);
-                    if (!gistId) this.setGistId(json.id);
-                    showNotification('同步成功', '数据已上传到云端');
-                } catch (e) { showNotification('同步失败', e.message, 'error'); }
+                    const gistJson = await gistRes.json();
+                    if (!gistRes.ok) throw new Error(gistJson.message);
+                    if (!gistId) this.setGistId(gistJson.id);
+                    showNotification('数据同步成功', '任务/Skill/灵感已上传到云端');
+                } catch (e) { showNotification('数据同步失败', e.message, 'error'); return; }
+
+                // 2. 推送代码到 GitHub 仓库
+                if (this.hasRepoConfig()) {
+                    try {
+                        await this.pushCodeToRepo(token);
+                        showNotification('代码推送成功', '工作台代码已自动提交到 GitHub 仓库');
+                    } catch (e) { showNotification('代码推送失败', e.message, 'error'); }
+                }
+            },
+            async pushCodeToRepo(token) {
+                const owner = this.getRepoOwner();
+                const repo = this.getRepoName();
+                const branch = this.getRepoBranch();
+                const path = this.getRepoPath();
+                // 获取当前页面完整 HTML
+                const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+                const encoded = btoa(unescape(encodeURIComponent(htmlContent)));
+                const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+                // 先获取现有文件的 sha
+                let sha = null;
+                const getRes = await fetch(`${apiUrl}?ref=${branch}`, {
+                    headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+                });
+                if (getRes.status === 200) {
+                    const getJson = await getRes.json();
+                    sha = getJson.sha;
+                }
+                // 提交文件
+                const body = {
+                    message: `update: ${new Date().toLocaleString('zh-CN')} 自动同步`,
+                    content: encoded,
+                    branch
+                };
+                if (sha) body.sha = sha;
+                const putRes = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (!putRes.ok) {
+                    const err = await putRes.json();
+                    throw new Error(err.message || `HTTP ${putRes.status}`);
+                }
             },
             async download() {
                 const token = this.getToken(), gistId = this.getGistId();
@@ -1219,6 +1309,11 @@
             if (!token) { showNotification('请输入 Token', 'Token 不能为空', 'error'); return; }
             CloudSync.setToken(token);
             if (gistId) CloudSync.setGistId(gistId);
+            // 保存仓库配置
+            CloudSync.setRepoOwner(document.getElementById('github-repo-owner').value.trim());
+            CloudSync.setRepoName(document.getElementById('github-repo-name').value.trim());
+            CloudSync.setRepoBranch(document.getElementById('github-repo-branch').value.trim() || 'main');
+            CloudSync.setRepoPath(document.getElementById('github-repo-path').value.trim() || 'ai-workbench.html');
             showNotification('配置已保存');
             closeModal('token-modal');
         }
