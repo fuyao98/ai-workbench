@@ -647,9 +647,10 @@
                     <span class="nav-badge" id="nav-inspire-count">0</span>
                 </div>
                 <div class="nav-section">系统</div>
-                <div class="nav-item" onclick="showTokenModal()">
+                <div class="nav-item" data-page="sync" onclick="switchPage('sync')">
                     <span class="nav-icon">&#9729;</span>
                     <span>云端同步</span>
+                    <span class="nav-badge" id="nav-sync-count">0</span>
                 </div>
             </nav>
         </aside>
@@ -754,6 +755,59 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 云端同步页 -->
+                <div class="page" id="sync-page">
+                    <!-- 配置区 -->
+                    <div class="sync-config" id="syncConfig" style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px;">
+                        <div style="font-weight: 600; font-size: 14px; margin-bottom: 12px; color: var(--accent-light);">&#9881; GitHub 仓库配置</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div class="form-group" style="margin: 0;">
+                                <label>GitHub Personal Access Token</label>
+                                <input type="password" class="input" id="sync-token" placeholder="ghp_xxxxxxxxxxxx">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label>Gist ID（可选，留空自动创建）</label>
+                                <input type="text" class="input" id="sync-gist-id" placeholder="">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label>仓库所有者 (Owner)</label>
+                                <input type="text" class="input" id="sync-repo-owner" placeholder="如: fuyao98">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label>仓库名 (Repo)</label>
+                                <input type="text" class="input" id="sync-repo-name" placeholder="如: ai-workbench">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label>分支 (Branch)</label>
+                                <input type="text" class="input" id="sync-repo-branch" placeholder="main">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label>文件路径</label>
+                                <input type="text" class="input" id="sync-repo-path" placeholder="ai-workbench.html">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 16px;">
+                            <button class="btn btn-secondary" onclick="saveSyncConfig()">&#128190; 保存配置</button>
+                            <button class="btn btn-primary" onclick="CloudSync.upload()">&#11014; 一键同步（数据 + 代码）</button>
+                            <button class="btn btn-accent" onclick="CloudSync.download()">&#11015; 从云端拉取数据</button>
+                        </div>
+                    </div>
+
+                    <!-- Push 状态展示 -->
+                    <div id="pushStatus" style="display: none; margin-bottom: 20px;"></div>
+
+                    <!-- 推送历史 -->
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                            <div style="font-weight: 600; font-size: 14px; color: var(--accent-light);">&#128221; 推送历史（点击卡片即可回退到该版本）</div>
+                            <button class="btn btn-small btn-secondary" onclick="loadCommitHistory()">&#128260; 刷新</button>
+                        </div>
+                        <div id="commitHistory">
+                            <div style="color: var(--text-muted); font-size: 13px; padding: 30px; text-align: center;">点击「刷新」加载推送历史</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -795,58 +849,7 @@
         </div>
     </div>
 
-    <!-- Token Modal -->
-    <div class="modal" id="token-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">云端同步配置</div>
-                <button class="btn-close" onclick="closeModal('token-modal')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>GitHub Personal Access Token</label>
-                    <input type="password" class="input" id="github-token" placeholder="ghp_xxxxxxxxxxxx">
-                    <small style="color: var(--text-muted); display: block; margin-top: 6px;">
-                        在 GitHub Settings > Developer settings > Personal access tokens 中生成，需勾选 gist 权限
-                    </small>
-                </div>
-                <div class="form-group">
-                    <label>Gist ID（可选，留空自动创建）</label>
-                    <input type="text" class="input" id="github-gist-id" placeholder="">
-                </div>
-                <div style="border-top: 1px solid var(--border); margin: 16px 0; padding-top: 16px;">
-                    <div style="font-weight: 600; font-size: 13px; margin-bottom: 10px; color: var(--accent-light);">&#127760; 代码自动备份到 GitHub 仓库</div>
-                    <div class="form-group">
-                        <label>仓库所有者 (Owner)</label>
-                        <input type="text" class="input" id="github-repo-owner" placeholder="如: yourname">
-                    </div>
-                    <div class="form-group">
-                        <label>仓库名 (Repo)</label>
-                        <input type="text" class="input" id="github-repo-name" placeholder="如: ai-workbench">
-                    </div>
-                    <div class="form-group">
-                        <label>分支 (Branch)</label>
-                        <input type="text" class="input" id="github-repo-branch" placeholder="main">
-                    </div>
-                    <div class="form-group">
-                        <label>文件路径</label>
-                        <input type="text" class="input" id="github-repo-path" placeholder="ai-workbench.html">
-                    </div>
-                    <small style="color: var(--text-muted); display: block; margin-bottom: 10px;">
-                        配置后，点击「上传云端」会自动把当前代码提交到该仓库，相当于 git push
-                    </small>
-                </div>
-                <div style="display: flex; gap: 10px; margin-top: 16px;">
-                    <button class="btn btn-primary" style="flex:1" onclick="CloudSync.upload()">&#11014; 上传云端</button>
-                    <button class="btn btn-accent" style="flex:1" onclick="CloudSync.download()">&#11015; 下载云端</button>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal('token-modal')">取消</button>
-                <button class="btn btn-primary" onclick="saveToken()">保存配置</button>
-            </div>
-        </div>
-    </div>
+    <!-- Token Modal (已废弃，配置迁移到云端同步页) -->
 
     <div class="toast-container" id="toastContainer"></div>
 
@@ -875,25 +878,18 @@
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
             document.getElementById(page + '-page').classList.add('active');
-            document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
-            const titles = { tasks: '任务管理', skills: 'Skill 管理', inspire: '灵感合集' };
-            document.getElementById('pageTitle').textContent = titles[page];
+            const navItem = document.querySelector(`.nav-item[data-page="${page}"]`);
+            if (navItem) navItem.classList.add('active');
+            const titles = { tasks: '任务管理', skills: 'Skill 管理', inspire: '灵感合集', sync: '云端同步' };
+            document.getElementById('pageTitle').textContent = titles[page] || '工作台';
             if (page === 'tasks') renderTasks();
             if (page === 'skills') renderSkills();
             if (page === 'inspire') renderInspirations();
+            if (page === 'sync') { loadSyncConfigToUI(); loadCommitHistory(); }
         }
 
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-        function showTokenModal() {
-            document.getElementById('github-token').value = CloudSync.getToken() || '';
-            document.getElementById('github-gist-id').value = CloudSync.getGistId() || '';
-            document.getElementById('github-repo-owner').value = CloudSync.getRepoOwner() || '';
-            document.getElementById('github-repo-name').value = CloudSync.getRepoName() || '';
-            document.getElementById('github-repo-branch').value = CloudSync.getRepoBranch() || 'main';
-            document.getElementById('github-repo-path').value = CloudSync.getRepoPath() || 'ai-workbench.html';
-            openModal('token-modal');
-        }
 
         // ==================== 任务管理 ====================
         let tasks = Storage.get('tasks');
@@ -1222,14 +1218,47 @@
             hasRepoConfig() {
                 return !!(this.getRepoOwner() && this.getRepoName());
             },
+            renderPushStatus(type, title, details, sha, htmlUrl) {
+                const el = document.getElementById('pushStatus');
+                el.style.display = 'block';
+                const colors = {
+                    success: { bg: 'rgba(124,179,66,0.12)', border: 'var(--accent)', icon: '&#9989;', color: 'var(--accent-light)' },
+                    error: { bg: 'rgba(229,115,115,0.12)', border: 'var(--danger)', icon: '&#10060;', color: 'var(--danger)' },
+                    info: { bg: 'rgba(100,181,246,0.12)', border: 'var(--info)', icon: '&#128274;', color: 'var(--info)' }
+                };
+                const c = colors[type] || colors.info;
+                el.innerHTML = `
+                    <div style="background: ${c.bg}; border: 1px solid ${c.border}; border-radius: var(--radius); padding: 16px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                            <span style="font-size: 18px;">${c.icon}</span>
+                            <div style="font-weight: 600; color: ${c.color}; font-size: 14px;">${esc(title)}</div>
+                        </div>
+                        <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: ${sha?8:0}px;">${esc(details)}</div>
+                        ${sha ? `
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 12px; flex-wrap: wrap;">
+                            <span style="color: var(--text-muted);">Commit SHA:</span>
+                            <code style="background: var(--bg-tertiary); padding: 2px 8px; border-radius: 4px; font-family: 'SF Mono', Monaco, monospace; color: var(--accent-light);">${esc(sha.substring(0,7))}</code>
+                            <code style="background: var(--bg-tertiary); padding: 2px 8px; border-radius: 4px; font-family: 'SF Mono', Monaco, monospace; color: var(--text-muted); font-size: 11px;">${esc(sha)}</code>
+                            ${htmlUrl ? `<a href="${htmlUrl}" target="_blank" style="color: var(--accent-light); text-decoration: none;">在 GitHub 查看 &rarr;</a>` : ''}
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            },
             async upload() {
                 const token = this.getToken();
-                if (!token) { showNotification('同步失败', '请先配置 GitHub Token', 'error'); return; }
+                if (!token) {
+                    this.renderPushStatus('error', '同步失败', '请先在配置区填写 GitHub Token', null, null);
+                    showNotification('同步失败', '请先配置 GitHub Token', 'error');
+                    return;
+                }
+
                 // 1. 同步数据到 Gist
                 const data = { tasks, skills, inspirations, updatedAt: nowStr() };
                 const gistId = this.getGistId();
                 const gistUrl = gistId ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';
                 const gistMethod = gistId ? 'PATCH' : 'POST';
+                let gistOk = false;
                 try {
                     const gistRes = await fetch(gistUrl, {
                         method: gistMethod, headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
@@ -1238,17 +1267,37 @@
                         })
                     });
                     const gistJson = await gistRes.json();
-                    if (!gistRes.ok) throw new Error(gistJson.message);
+                    if (!gistRes.ok) throw new Error(gistJson.message || `HTTP ${gistRes.status}`);
                     if (!gistId) this.setGistId(gistJson.id);
-                    showNotification('数据同步成功', '任务/Skill/灵感已上传到云端');
-                } catch (e) { showNotification('数据同步失败', e.message, 'error'); return; }
+                    gistOk = true;
+                } catch (e) {
+                    this.renderPushStatus('error', '数据同步失败', e.message, null, null);
+                    showNotification('数据同步失败', e.message, 'error');
+                    return;
+                }
 
                 // 2. 推送代码到 GitHub 仓库
-                if (this.hasRepoConfig()) {
-                    try {
-                        await this.pushCodeToRepo(token);
-                        showNotification('代码推送成功', '工作台代码已自动提交到 GitHub 仓库');
-                    } catch (e) { showNotification('代码推送失败', e.message, 'error'); }
+                if (!this.hasRepoConfig()) {
+                    this.renderPushStatus('success', '数据同步成功（未配置仓库，跳过代码推送）',
+                        `任务 ${data.tasks.length} 条, Skill ${data.skills.length} 条, 灵感 ${data.inspirations.length} 条`,
+                        null, null);
+                    showNotification('数据同步成功', '未配置仓库，跳过代码推送');
+                    return;
+                }
+
+                this.renderPushStatus('info', '正在推送代码到 GitHub 仓库...', '请稍候', null, null);
+                try {
+                    const result = await this.pushCodeToRepo(token);
+                    const htmlUrl = `https://github.com/${this.getRepoOwner()}/${this.getRepoName()}/commit/${result.sha}`;
+                    this.renderPushStatus('success', '代码 Push 成功！',
+                        `分支: ${this.getRepoBranch()}  ·  文件: ${this.getRepoPath()}`,
+                        result.sha, htmlUrl);
+                    showNotification('Push 成功', '代码已提交到 GitHub 仓库');
+                    // 刷新推送历史
+                    setTimeout(() => loadCommitHistory(), 800);
+                } catch (e) {
+                    this.renderPushStatus('error', '代码 Push 失败', e.message, null, null);
+                    showNotification('Push 失败', e.message, 'error');
                 }
             },
             async pushCodeToRepo(token) {
@@ -1256,11 +1305,9 @@
                 const repo = this.getRepoName();
                 const branch = this.getRepoBranch();
                 const path = this.getRepoPath();
-                // 获取当前页面完整 HTML
                 const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
                 const encoded = btoa(unescape(encodeURIComponent(htmlContent)));
                 const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-                // 先获取现有文件的 sha
                 let sha = null;
                 const getRes = await fetch(`${apiUrl}?ref=${branch}`, {
                     headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
@@ -1269,7 +1316,6 @@
                     const getJson = await getRes.json();
                     sha = getJson.sha;
                 }
-                // 提交文件
                 const body = {
                     message: `update: ${new Date().toLocaleString('zh-CN')} 自动同步`,
                     content: encoded,
@@ -1285,6 +1331,8 @@
                     const err = await putRes.json();
                     throw new Error(err.message || `HTTP ${putRes.status}`);
                 }
+                const result = await putRes.json();
+                return { sha: result.commit.sha, commitUrl: result.commit.html_url };
             },
             async download() {
                 const token = this.getToken(), gistId = this.getGistId();
@@ -1303,19 +1351,125 @@
             }
         };
 
-        function saveToken() {
-            const token = document.getElementById('github-token').value.trim();
-            const gistId = document.getElementById('github-gist-id').value.trim();
-            if (!token) { showNotification('请输入 Token', 'Token 不能为空', 'error'); return; }
+        // ==================== 同步配置 UI ====================
+        function loadSyncConfigToUI() {
+            document.getElementById('sync-token').value = CloudSync.getToken() || '';
+            document.getElementById('sync-gist-id').value = CloudSync.getGistId() || '';
+            document.getElementById('sync-repo-owner').value = CloudSync.getRepoOwner() || '';
+            document.getElementById('sync-repo-name').value = CloudSync.getRepoName() || '';
+            document.getElementById('sync-repo-branch').value = CloudSync.getRepoBranch();
+            document.getElementById('sync-repo-path').value = CloudSync.getRepoPath();
+        }
+
+        function saveSyncConfig() {
+            const token = document.getElementById('sync-token').value.trim();
+            if (!token) {
+                showNotification('请输入 Token', 'Token 不能为空', 'error');
+                return;
+            }
             CloudSync.setToken(token);
-            if (gistId) CloudSync.setGistId(gistId);
-            // 保存仓库配置
-            CloudSync.setRepoOwner(document.getElementById('github-repo-owner').value.trim());
-            CloudSync.setRepoName(document.getElementById('github-repo-name').value.trim());
-            CloudSync.setRepoBranch(document.getElementById('github-repo-branch').value.trim() || 'main');
-            CloudSync.setRepoPath(document.getElementById('github-repo-path').value.trim() || 'ai-workbench.html');
+            CloudSync.setGistId(document.getElementById('sync-gist-id').value.trim());
+            CloudSync.setRepoOwner(document.getElementById('sync-repo-owner').value.trim());
+            CloudSync.setRepoName(document.getElementById('sync-repo-name').value.trim());
+            CloudSync.setRepoBranch(document.getElementById('sync-repo-branch').value.trim() || 'main');
+            CloudSync.setRepoPath(document.getElementById('sync-repo-path').value.trim() || 'ai-workbench.html');
             showNotification('配置已保存');
-            closeModal('token-modal');
+        }
+
+        // ==================== 推送历史 ====================
+        async function loadCommitHistory() {
+            const token = CloudSync.getToken();
+            const owner = CloudSync.getRepoOwner();
+            const repo = CloudSync.getRepoName();
+            const branch = CloudSync.getRepoBranch();
+            const path = CloudSync.getRepoPath();
+            const container = document.getElementById('commitHistory');
+            if (!token || !owner || !repo) {
+                container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; padding: 30px; text-align: center;">请先在配置区填写 Token、Owner、Repo 字段</div>`;
+                document.getElementById('nav-sync-count').textContent = 0;
+                return;
+            }
+            container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; padding: 30px; text-align: center;">加载中...</div>`;
+            try {
+                const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?path=${path}&sha=${branch}&per_page=30`, {
+                    headers: { 'Authorization': `token ${token}` }
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.message || `HTTP ${res.status}`);
+                }
+                const commits = await res.json();
+                document.getElementById('nav-sync-count').textContent = commits.length;
+                if (commits.length === 0) {
+                    container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; padding: 30px; text-align: center;">该仓库还没有提交记录</div>`;
+                    return;
+                }
+                container.innerHTML = commits.map((c, i) => {
+                    const date = new Date(c.commit.author.date).toLocaleString('zh-CN');
+                    const isLatest = i === 0;
+                    return `
+                        <div class="commit-card" data-sha="${c.sha}" style="
+                            background: var(--bg-card);
+                            border: 1px solid ${isLatest ? 'var(--accent)' : 'var(--border)'};
+                            border-radius: var(--radius-sm);
+                            padding: 14px 16px;
+                            margin-bottom: 10px;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                        " onmouseover="this.style.borderColor='var(--accent)'; this.style.background='var(--bg-hover)';"
+                           onmouseout="this.style.borderColor='${isLatest ? 'var(--accent)' : 'var(--border)'}'; this.style.background='var(--bg-card)';"
+                           onclick="rollbackToCommit('${c.sha}', '${esc(c.commit.message).replace(/'/g,"\\'")}')">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    ${isLatest ? '<span style="background: var(--accent); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 8px; font-weight: 600;">最新</span>' : ''}
+                                    <span style="font-weight: 500; font-size: 13px; color: var(--text-primary);">${esc(c.commit.message.split('\\n')[0])}</span>
+                                </div>
+                                <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-family: 'SF Mono', Monaco, monospace; font-size: 11px; color: var(--text-muted);">${c.sha.substring(0,7)}</code>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text-muted);">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span>&#128100; ${esc(c.commit.author.name)}</span>
+                                    <span>&#128338; ${date}</span>
+                                </div>
+                                <a href="${c.html_url}" target="_blank" onclick="event.stopPropagation()" style="color: var(--accent-light); text-decoration: none; font-size: 12px;">GitHub &rarr;</a>
+                            </div>
+                            <div style="margin-top: 8px; font-size: 11px; color: var(--accent-light); opacity: 0; transition: opacity 0.2s;" class="commit-hint">点击回退到此版本（代码会替换为该版本的内容）</div>
+                        </div>`;
+                }).join('');
+            } catch (e) {
+                container.innerHTML = `<div style="color: var(--danger); font-size: 13px; padding: 20px;">加载失败: ${esc(e.message)}</div>`;
+            }
+        }
+
+        async function rollbackToCommit(sha, message) {
+            if (!confirm(`确定要回退到该版本吗？\n\n版本说明: ${message}\nSHA: ${sha.substring(0,7)}\n\n回退后当前页面会刷新加载该版本的内容。`)) return;
+            const token = CloudSync.getToken();
+            const owner = CloudSync.getRepoOwner();
+            const repo = CloudSync.getRepoName();
+            const branch = CloudSync.getRepoBranch();
+            const path = CloudSync.getRepoPath();
+            CloudSync.renderPushStatus('info', '正在拉取历史版本...', `SHA: ${sha.substring(0,7)}`, sha, null);
+            try {
+                const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${sha}`, {
+                    headers: { 'Authorization': `token ${token}` }
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.message || `HTTP ${res.status}`);
+                }
+                const file = await res.json();
+                // 解码 base64
+                const html = decodeURIComponent(escape(atob(file.content.replace(/\\n/g, ''))));
+                // 用一个特殊标记把回退版本保存到 localStorage，下次打开页面时检测并应用
+                localStorage.setItem('workbench_pending_html', html);
+                CloudSync.renderPushStatus('success', '已拉取历史版本，即将应用',
+                    '页面即将刷新...', sha, `https://github.com/${owner}/${repo}/commit/${sha}`);
+                showNotification('回退成功', '正在刷新页面以加载该版本');
+                setTimeout(() => { location.reload(); }, 1500);
+            } catch (e) {
+                CloudSync.renderPushStatus('error', '回退失败', e.message, sha, null);
+                showNotification('回退失败', e.message, 'error');
+            }
         }
 
         function exportData() {
@@ -1356,6 +1510,19 @@
         setInterval(updateTime, 1000); updateTime();
 
         // ==================== 初始化 ====================
+        // 检查是否有待应用的回退 HTML
+        (function checkPendingRollback() {
+            const pending = localStorage.getItem('workbench_pending_html');
+            if (pending) {
+                // 由于当前 HTML 已被浏览器加载，用 innerHTML 直接替换整个文档
+                document.open();
+                document.write(pending);
+                document.close();
+                // 清理标记（会被新加载的页面自己初始化）
+                try { localStorage.removeItem('workbench_pending_html'); } catch(e) {}
+                return;
+            }
+        })();
         initSkills();
         renderTasks();
     </script>
