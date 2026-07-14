@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 工作台</title>
+    <style>
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #242424;
+            --bg-tertiary: #2e2e2e;
+            --bg-card: #2a2a2a;
+            --bg-hover: #333333;
+            --text-primary: #e8e8e8;
+            --text-secondary: #999999;
+            --text-muted: #666666;
+            --accent: #7cb342;
+            --accent-light: #9ccc65;
+            --accent-dark: #558b2f;
+            --accent-bg: rgba(124, 179, 66, 0.12);
+            --border: #3a3a3a;
+            --border-light: #444444;
+            --danger: #e57373;
+            --warning: #ffb74d;
+            --info: #64b5f6;
+            --shadow: 0 2px 8px rgba(0,0,0,0.3);
+            --shadow-hover: 0 4px 16px rgba(0,0,0,0.4);
+            --radius: 10px;
+            --radius-sm: 6px;
+            --radius-pill: 20px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            font-size: 14px;
+        }
+        .app-container { display: flex; height: 100vh; }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 220px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .sidebar-header {
+            padding: 20px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .sidebar-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sidebar-title .icon {
+            width: 28px; height: 28px;
+            background: var(--accent-bg);
+            border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--accent);
+            font-size: 14px;
+        }
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 10px;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            margin-bottom: 2px;
+            position: relative;
+        }
+        .nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .nav-item.active { background: var(--accent-bg); color: var(--accent-light); }
+        .nav-item .nav-icon { width: 18px; text-align: center; font-size: 15px; }
+        .nav-item .nav-badge {
+            margin-left: auto;
+            background: var(--accent-dark);
+            color: #fff;
+            font-size: 11px;
+            padding: 1px 7px;
+            border-radius: var(--radius-pill);
+            font-weight: 500;
+        }
+        .nav-section {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 16px 12px 8px;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--bg-primary);
+        }
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+        .page-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+        }
+
+        /* 按钮 */
+        .btn {
+            padding: 7px 14px;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent-light); }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .btn-small { padding: 5px 10px; font-size: 12px; }
+        .btn-ghost { background: transparent; color: var(--text-secondary); }
+        .btn-ghost:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .btn-danger { background: rgba(229,115,115,0.15); color: var(--danger); }
+        .btn-danger:hover { background: rgba(229,115,115,0.25); }
+        .btn-accent { background: var(--accent-bg); color: var(--accent-light); border: 1px solid var(--accent-dark); }
+        .btn-accent:hover { background: rgba(124,179,66,0.2); }
+
+        /* 输入框 */
+        .input, .textarea {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            outline: none;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+        .input:focus, .textarea:focus { border-color: var(--accent); }
+        .textarea { resize: vertical; min-height: 60px; }
+
+        /* 页面 */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* 筛选标签 */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-secondary);
+            padding: 4px 6px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+        }
+        .filter-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 0 4px;
+        }
+        .filter-pill {
+            padding: 4px 10px;
+            border-radius: var(--radius-pill);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+        }
+        .filter-pill:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .filter-pill.active { background: var(--accent-bg); color: var(--accent-light); font-weight: 500; }
+        .filter-count {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-left: 2px;
+        }
+
+        /* ===== 看板 ===== */
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            height: calc(100vh - 180px);
+            min-height: 400px;
+        }
+        .kanban-column {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .kanban-header {
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+        .kanban-title {
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .kanban-title .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+        }
+        .kanban-count {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: var(--radius-pill);
+        }
+        .kanban-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .kanban-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            cursor: grab;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .kanban-card:hover {
+            border-color: var(--border-light);
+            box-shadow: var(--shadow);
+        }
+        .kanban-card.dragging { opacity: 0.5; }
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .card-checkbox {
+            width: 16px; height: 16px;
+            border: 2px solid var(--border-light);
+            border-radius: 4px;
+            cursor: pointer;
+            flex-shrink: 0;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .card-checkbox:hover { border-color: var(--accent); }
+        .card-checkbox.checked {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+        .card-title {
+            flex: 1;
+            font-size: 13px;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+        .card-title.completed { text-decoration: line-through; color: var(--text-muted); }
+        .card-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .card-tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: var(--radius-pill);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+        .card-tag.tag-ai { background: rgba(100,181,246,0.15); color: var(--info); }
+        .card-tag.tag-urgent { background: rgba(255,183,77,0.15); color: var(--warning); }
+        .btn-ai {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: var(--radius-pill);
+            background: var(--accent-bg);
+            color: var(--accent-light);
+            border: 1px solid var(--accent-dark);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .btn-ai:hover { background: rgba(124,179,66,0.2); }
+        .btn-ai.assigned { background: var(--accent); color: #fff; }
+
+        /* 添加任务输入 */
+        .task-input-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: var(--bg-secondary);
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            align-items: center;
+        }
+        .task-input-bar .input { flex: 1; background: var(--bg-card); }
+
+        /* ===== Skill 卡片 ===== */
+        .skill-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+        .skill-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            transition: all 0.2s;
+        }
+        .skill-card:hover {
+            border-color: var(--accent-dark);
+            box-shadow: var(--shadow-hover);
+        }
+        .skill-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .skill-icon {
+            width: 36px; height: 36px;
+            border-radius: var(--radius-sm);
+            background: var(--accent-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+        .skill-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .skill-source {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+        .skill-desc {
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .skill-usage {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            padding: 8px 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-family: 'SF Mono', Monaco, monospace;
+            word-break: break-all;
+        }
+        .skill-usage-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            font-family: inherit;
+        }
+        .skill-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 12px;
+        }
+
+        /* ===== 灵感合集 ===== */
+        .inspire-layout {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 20px;
+            height: calc(100vh - 180px);
+        }
+        .inspire-main {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+        }
+        .inspire-sidebar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+        }
+        .inspire-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            transition: all 0.2s;
+        }
+        .inspire-card:hover { border-color: var(--border-light); }
+        .inspire-text {
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .inspire-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .inspire-category {
+            padding: 2px 10px;
+            border-radius: var(--radius-pill);
+            font-size: 11px;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+        .inspire-input-area {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+        }
+        .quick-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .quick-tag {
+            padding: 4px 10px;
+            border-radius: var(--radius-pill);
+            font-size: 12px;
+            cursor: pointer;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: none;
+            transition: all 0.2s;
+        }
+        .quick-tag:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .quick-tag.active { background: var(--accent-bg); color: var(--accent-light); }
+
+        /* ===== Modal ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .modal-title { font-size: 16px; font-weight: 600; }
+        .btn-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 28px; height: 28px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: var(--radius-sm);
+        }
+        .btn-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .modal-body { padding: 20px; }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+        }
+        .form-group { margin-bottom: 14px; }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        /* ===== Toast ===== */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            min-width: 240px;
+            box-shadow: var(--shadow-hover);
+            animation: slideIn 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .toast.success { border-left: 3px solid var(--accent); }
+        .toast.error { border-left: 3px solid var(--danger); }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* ===== Scrollbar ===== */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+        /* 响应式 */
+        @media (max-width: 1100px) {
+            .kanban-board { grid-template-columns: 1fr 1fr; }
+            .inspire-layout { grid-template-columns: 1fr; }
+            .inspire-sidebar { display: none; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar-title span:last-child, .nav-item span, .nav-badge, .nav-section { display: none; }
+            .kanban-board { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">
+                    <span class="icon">&#9889;</span>
+                    <span>AI 工作台</span>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">工作区</div>
+                <div class="nav-item active" data-page="tasks" onclick="switchPage('tasks')">
+                    <span class="nav-icon">&#9745;</span>
+                    <span>任务管理</span>
+                    <span class="nav-badge" id="nav-task-count">0</span>
+                </div>
+                <div class="nav-item" data-page="skills" onclick="switchPage('skills')">
+                    <span class="nav-icon">&#128736;</span>
+                    <span>Skill 管理</span>
+                    <span class="nav-badge" id="nav-skill-count">0</span>
+                </div>
+                <div class="nav-item" data-page="inspire" onclick="switchPage('inspire')">
+                    <span class="nav-icon">&#128161;</span>
+                    <span>灵感合集</span>
+                    <span class="nav-badge" id="nav-inspire-count">0</span>
+                </div>
+                <div class="nav-section">系统</div>
+                <div class="nav-item" onclick="showTokenModal()">
+                    <span class="nav-icon">&#9729;</span>
+                    <span>云端同步</span>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- 主内容 -->
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="page-title" id="pageTitle">任务管理</div>
+                <div class="top-actions">
+                    <span id="currentTime" style="color: var(--text-secondary); font-size: 13px;"></span>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <!-- 任务管理页 -->
+                <div class="page active" id="tasks-page">
+                    <div class="task-input-bar">
+                        <input type="text" class="input" id="taskInput" placeholder="写下一条任务，回车创建...">
+                        <button class="btn btn-primary" onclick="addTask()">+ 添加</button>
+                    </div>
+                    <div class="kanban-board" id="kanbanBoard">
+                        <div class="kanban-column" data-status="todo">
+                            <div class="kanban-header">
+                                <div class="kanban-title">
+                                    <span class="dot" style="background: var(--text-muted);"></span>
+                                    待办
+                                </div>
+                                <span class="kanban-count" id="count-todo">0</span>
+                            </div>
+                            <div class="kanban-list" id="list-todo"></div>
+                        </div>
+                        <div class="kanban-column" data-status="doing">
+                            <div class="kanban-header">
+                                <div class="kanban-title">
+                                    <span class="dot" style="background: var(--warning);"></span>
+                                    进行中
+                                </div>
+                                <span class="kanban-count" id="count-doing">0</span>
+                            </div>
+                            <div class="kanban-list" id="list-doing"></div>
+                        </div>
+                        <div class="kanban-column" data-status="done">
+                            <div class="kanban-header">
+                                <div class="kanban-title">
+                                    <span class="dot" style="background: var(--accent);"></span>
+                                    已完成
+                                </div>
+                                <span class="kanban-count" id="count-done">0</span>
+                            </div>
+                            <div class="kanban-list" id="list-done"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Skill 管理页 -->
+                <div class="page" id="skills-page">
+                    <div class="task-input-bar">
+                        <input type="text" class="input" id="skillNeedInput" placeholder="描述你的需求，AI 会为你推荐合适的 Skill...">
+                        <button class="btn btn-primary" onclick="generateSkills()">&#9889; AI 生成</button>
+                        <button class="btn btn-secondary" onclick="searchWebSkills()">&#127758; 搜索 Skill</button>
+                    </div>
+                    <div class="filter-bar" id="skillFilters">
+                        <div class="filter-group">
+                            <span class="filter-label">来源</span>
+                            <button class="filter-pill active" onclick="filterSkills('all')">全部</button>
+                            <button class="filter-pill" onclick="filterSkills('ai')">AI 生成</button>
+                            <button class="filter-pill" onclick="filterSkills('web')">网络推荐</button>
+                            <button class="filter-pill" onclick="filterSkills('custom')">自定义</button>
+                        </div>
+                    </div>
+                    <div class="skill-grid" id="skillGrid"></div>
+                </div>
+
+                <!-- 灵感合集页 -->
+                <div class="page" id="inspire-page">
+                    <div class="inspire-layout">
+                        <div class="inspire-main">
+                            <div class="inspire-input-area">
+                                <textarea class="textarea" id="inspireInput" placeholder="随时记录你的灵感、想法、重要事项...（支持 Markdown）"></textarea>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                                    <div class="quick-tags">
+                                        <button class="quick-tag" onclick="toggleTag(this)">测试技术</button>
+                                        <button class="quick-tag" onclick="toggleTag(this)">自动化</button>
+                                        <button class="quick-tag" onclick="toggleTag(this)">Bug分析</button>
+                                        <button class="quick-tag" onclick="toggleTag(this)">工具</button>
+                                        <button class="quick-tag" onclick="toggleTag(this)">会议</button>
+                                        <button class="quick-tag" onclick="toggleTag(this)">其他</button>
+                                    </div>
+                                    <button class="btn btn-primary" onclick="addInspiration()">记录灵感</button>
+                                </div>
+                            </div>
+                            <div id="inspireList"></div>
+                        </div>
+                        <div class="inspire-sidebar">
+                            <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">灵感统计</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">共 <span id="inspire-total">0</span> 条记录</div>
+                            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 6px;" id="inspire-stats"></div>
+                            <div style="border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px;">
+                                <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">最近标签</div>
+                                <div class="quick-tags" id="recent-tags"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Task Detail Modal -->
+    <div class="modal" id="task-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">编辑任务</div>
+                <button class="btn-close" onclick="closeModal('task-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>任务内容</label>
+                    <textarea class="textarea" id="edit-task-content"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>状态</label>
+                    <select class="input" id="edit-task-status">
+                        <option value="todo">待办</option>
+                        <option value="doing">进行中</option>
+                        <option value="done">已完成</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>标签（用逗号分隔）</label>
+                    <input type="text" class="input" id="edit-task-tags" placeholder="如: 测试, 自动化, 紧急">
+                </div>
+                <div class="form-group">
+                    <label>AI 执行说明（可选）</label>
+                    <textarea class="textarea" id="edit-task-ai-note" placeholder="分配给 AI 时，告诉 AI 如何执行这个任务..."></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-danger" onclick="deleteTask()">删除</button>
+                <button class="btn btn-secondary" onclick="closeModal('task-modal')">取消</button>
+                <button class="btn btn-primary" onclick="saveTask()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Token Modal -->
+    <div class="modal" id="token-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">云端同步配置</div>
+                <button class="btn-close" onclick="closeModal('token-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>GitHub Personal Access Token</label>
+                    <input type="password" class="input" id="github-token" placeholder="ghp_xxxxxxxxxxxx">
+                    <small style="color: var(--text-muted); display: block; margin-top: 6px;">
+                        在 GitHub Settings > Developer settings > Personal access tokens 中生成，需勾选 gist 权限
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label>Gist ID（可选，留空自动创建）</label>
+                    <input type="text" class="input" id="github-gist-id" placeholder="">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 16px;">
+                    <button class="btn btn-primary" style="flex:1" onclick="CloudSync.upload()">&#11014; 上传云端</button>
+                    <button class="btn btn-accent" style="flex:1" onclick="CloudSync.download()">&#11015; 下载云端</button>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('token-modal')">取消</button>
+                <button class="btn btn-primary" onclick="saveToken()">保存配置</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+
+    <script>
+        // ==================== 工具函数 ====================
+        const Storage = {
+            get(key) { const d = localStorage.getItem(key); return d ? JSON.parse(d) : []; },
+            set(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+        };
+        function uuid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 5); }
+        function nowStr() { return new Date().toISOString(); }
+        function fmtDate(s) { return new Date(s).toLocaleString('zh-CN', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }); }
+
+        function showNotification(title, msg, type='success') {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.innerHTML = `<span>${type==='success'?'&#9989;':'&#10071;'}</span><div><div style="font-weight:600">${title}</div><div style="font-size:12px;color:var(--text-secondary)">${msg}</div></div>`;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        // ==================== 页面切换 ====================
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
+            document.getElementById(page + '-page').classList.add('active');
+            document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
+            const titles = { tasks: '任务管理', skills: 'Skill 管理', inspire: '灵感合集' };
+            document.getElementById('pageTitle').textContent = titles[page];
+            if (page === 'tasks') renderTasks();
+            if (page === 'skills') renderSkills();
+            if (page === 'inspire') renderInspirations();
+        }
+
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        // ==================== 任务管理 ====================
+        let tasks = Storage.get('tasks');
+        let editingTaskId = null;
+
+        function renderTasks() {
+            const cols = { todo: [], doing: [], done: [] };
+            tasks.forEach(t => { if (cols[t.status]) cols[t.status].push(t); });
+            ['todo','doing','done'].forEach(s => {
+                document.getElementById('count-'+s).textContent = cols[s].length;
+                document.getElementById('list-'+s).innerHTML = cols[s].map(t => taskCard(t)).join('');
+            });
+            document.getElementById('nav-task-count').textContent = tasks.length;
+        }
+
+        function taskCard(t) {
+            const aiBtn = t.assignedToAI
+                ? `<button class="btn-ai assigned" onclick="unassignAI('${t.id}', event)">&#129302; 已派AI</button>`
+                : `<button class="btn-ai" onclick="assignAI('${t.id}', event)">&#9889; 派给AI</button>`;
+            const tags = (t.tags||[]).map(tag => `<span class="card-tag">${tag}</span>`).join('');
+            return `
+                <div class="kanban-card" draggable="true" ondragstart="dragTask(event,'${t.id}')" onclick="editTask('${t.id}')">
+                    <div class="card-header">
+                        <div class="card-checkbox ${t.status==='done'?'checked':''}" onclick="toggleTask('${t.id}',event)">
+                            ${t.status==='done'?'&#10003;':''}
+                        </div>
+                        <div class="card-title ${t.status==='done'?'completed':''}">${esc(t.content)}</div>
+                    </div>
+                    <div class="card-actions">
+                        ${aiBtn}
+                        ${tags}
+                    </div>
+                </div>`;
+        }
+
+        function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+        function addTask() {
+            const input = document.getElementById('taskInput');
+            const content = input.value.trim();
+            if (!content) return;
+            tasks.push({ id: uuid(), content, status: 'todo', tags: [], assignedToAI: false, aiNote: '', createdAt: nowStr() });
+            Storage.set('tasks', tasks);
+            input.value = '';
+            renderTasks();
+            showNotification('任务已创建', content);
+        }
+        document.getElementById('taskInput').addEventListener('keypress', e => { if (e.key==='Enter') addTask(); });
+
+        function toggleTask(id, e) {
+            e.stopPropagation();
+            const t = tasks.find(x => x.id===id);
+            if (!t) return;
+            t.status = t.status==='done' ? 'todo' : 'done';
+            Storage.set('tasks', tasks);
+            renderTasks();
+        }
+
+        function assignAI(id, e) {
+            e.stopPropagation();
+            const t = tasks.find(x => x.id===id);
+            if (!t) return;
+            t.assignedToAI = true;
+            if (!t.aiNote) t.aiNote = '';
+            Storage.set('tasks', tasks);
+            renderTasks();
+            showNotification('已派给 AI', `任务「${t.content.substring(0,20)}...」已分配给 AI 执行`);
+        }
+        function unassignAI(id, e) {
+            e.stopPropagation();
+            const t = tasks.find(x => x.id===id);
+            if (!t) return;
+            t.assignedToAI = false;
+            Storage.set('tasks', tasks);
+            renderTasks();
+        }
+
+        function editTask(id) {
+            const t = tasks.find(x => x.id===id);
+            if (!t) return;
+            editingTaskId = id;
+            document.getElementById('edit-task-content').value = t.content;
+            document.getElementById('edit-task-status').value = t.status;
+            document.getElementById('edit-task-tags').value = (t.tags||[]).join(', ');
+            document.getElementById('edit-task-ai-note').value = t.aiNote || '';
+            openModal('task-modal');
+        }
+
+        function saveTask() {
+            const t = tasks.find(x => x.id===editingTaskId);
+            if (!t) return;
+            t.content = document.getElementById('edit-task-content').value.trim();
+            t.status = document.getElementById('edit-task-status').value;
+            t.tags = document.getElementById('edit-task-tags').value.split(/[,，]/).map(s=>s.trim()).filter(Boolean);
+            t.aiNote = document.getElementById('edit-task-ai-note').value.trim();
+            Storage.set('tasks', tasks);
+            closeModal('task-modal');
+            renderTasks();
+            showNotification('任务已更新');
+        }
+
+        function deleteTask() {
+            if (!confirm('确定删除这个任务？')) return;
+            tasks = tasks.filter(x => x.id !== editingTaskId);
+            Storage.set('tasks', tasks);
+            closeModal('task-modal');
+            renderTasks();
+            showNotification('任务已删除');
+        }
+
+        // 拖拽
+        function dragTask(e, id) { e.dataTransfer.setData('taskId', id); e.target.classList.add('dragging'); }
+        document.querySelectorAll('.kanban-list').forEach(list => {
+            list.addEventListener('dragover', e => e.preventDefault());
+            list.addEventListener('drop', e => {
+                e.preventDefault();
+                const id = e.dataTransfer.getData('taskId');
+                const status = list.parentElement.dataset.status;
+                const t = tasks.find(x => x.id===id);
+                if (t && t.status!==status) { t.status=status; Storage.set('tasks',tasks); renderTasks(); }
+                document.querySelectorAll('.kanban-card').forEach(c=>c.classList.remove('dragging'));
+            });
+        });
+
+        // ==================== Skill 管理 ====================
+        let skills = Storage.get('skills');
+        let skillFilter = 'all';
+
+        const builtinSkills = [
+            { id: 's1', name: '自动化测试脚本生成', desc: '根据测试需求描述，自动生成 Python/Selenium 或 Playwright 测试脚本', usage: '/skill 生成测试脚本: 登录页面需要覆盖用户名/密码/验证码的边界测试', source: 'ai' },
+            { id: 's2', name: 'Bug 根因分析', desc: '输入 Bug 描述和日志，AI 帮助分析可能的根因和修复建议', usage: '/skill 分析根因: [粘贴报错日志]', source: 'ai' },
+            { id: 's3', name: '测试用例评审', desc: '自动评审测试用例的完整性、可执行性和覆盖率', usage: '/skill 评审用例: [粘贴用例内容]', source: 'ai' },
+            { id: 's4', name: 'API 测试辅助', desc: '根据接口文档自动生成 Postman Collection 或 curl 命令', usage: '/skill API测试: [接口文档URL或描述]', source: 'ai' },
+            { id: 's5', name: 'Git 冲突解决', desc: '分析 git conflict 并提供解决建议', usage: '/skill 解决冲突: [粘贴冲突内容]', source: 'web' },
+            { id: 's6', name: 'Docker 环境搭建', desc: '根据技术栈生成 Dockerfile 和 docker-compose 配置', usage: '/skill Docker化: [技术栈描述]', source: 'web' },
+        ];
+
+        function initSkills() {
+            if (skills.length === 0) {
+                skills = builtinSkills.map(s => ({...s, createdAt: nowStr()}));
+                Storage.set('skills', skills);
+            }
+        }
+
+        function renderSkills() {
+            const grid = document.getElementById('skillGrid');
+            const filtered = skillFilter==='all' ? skills : skills.filter(s => s.source===skillFilter);
+            grid.innerHTML = filtered.map(s => `
+                <div class="skill-card">
+                    <div class="skill-header">
+                        <div class="skill-icon">${s.source==='ai'?'&#9889;':s.source==='web'?'&#127758;':'&#128736;'}</div>
+                        <div>
+                            <div class="skill-name">${esc(s.name)}</div>
+                        </div>
+                        <span class="skill-source">${s.source==='ai'?'AI 生成':s.source==='web'?'网络推荐':'自定义'}</span>
+                    </div>
+                    <div class="skill-desc">${esc(s.desc)}</div>
+                    <div class="skill-usage">
+                        <div class="skill-usage-label">使用方式</div>
+                        ${esc(s.usage)}
+                    </div>
+                    <div class="skill-actions">
+                        <button class="btn btn-small btn-secondary" onclick="copySkillUsage('${s.id}')">复制使用方式</button>
+                        ${s.source!=='ai' && s.source!=='web' ? `<button class="btn btn-small btn-danger" onclick="deleteSkill('${s.id}')">删除</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('nav-skill-count').textContent = skills.length;
+        }
+
+        function filterSkills(type) {
+            skillFilter = type;
+            document.querySelectorAll('#skillFilters .filter-pill').forEach(p => p.classList.remove('active'));
+            event.target.classList.add('active');
+            renderSkills();
+        }
+
+        function generateSkills() {
+            const input = document.getElementById('skillNeedInput');
+            const need = input.value.trim();
+            if (!need) { showNotification('请输入需求', '描述一下你需要什么能力', 'error'); return; }
+            const generated = [
+                { id: uuid(), name: `${need} - 智能辅助`, desc: `根据「${need}」自动生成的 Skill，可协助你完成相关工作流。`, usage: `/skill ${need}: [补充具体参数]`, source: 'ai' },
+                { id: uuid(), name: `${need} - 文档生成器`, desc: `针对「${need}」场景，自动生成标准化文档和模板。`, usage: `/skill 生成文档: ${need}`, source: 'ai' },
+            ];
+            skills = [...generated, ...skills];
+            Storage.set('skills', skills);
+            input.value = '';
+            renderSkills();
+            showNotification('AI 已生成 Skill', `根据「${need}」为你生成了 ${generated.length} 个 Skill`);
+        }
+
+        function searchWebSkills() {
+            const input = document.getElementById('skillNeedInput');
+            const need = input.value.trim();
+            const webSkills = [
+                { id: uuid(), name: 'Playwright 端到端测试', desc: '微软出品的现代自动化测试框架，支持多浏览器、自动等待、Trace Viewer 等强大功能。', usage: 'npx playwright init && npx playwright test', source: 'web' },
+                { id: uuid(), name: 'Allure 测试报告', desc: '轻量级、灵活的测试报告工具，支持多种语言和框架，报告美观且支持历史趋势。', usage: 'pip install allure-pytest && pytest --alluredir=./report', source: 'web' },
+                { id: uuid(), name: 'Locust 性能测试', desc: 'Python 编写的可扩展负载测试工具，用代码定义用户行为，支持分布式压测。', usage: 'pip install locust && locust -f locustfile.py', source: 'web' },
+            ];
+            skills = [...webSkills, ...skills];
+            Storage.set('skills', skills);
+            input.value = '';
+            renderSkills();
+            showNotification('已添加推荐 Skill', '从网络推荐中为你添加了 3 个热门 Skill');
+        }
+
+        function copySkillUsage(id) {
+            const s = skills.find(x => x.id===id);
+            if (!s) return;
+            navigator.clipboard.writeText(s.usage).then(() => showNotification('已复制', s.usage));
+        }
+        function deleteSkill(id) {
+            if (!confirm('确定删除这个 Skill？')) return;
+            skills = skills.filter(x => x.id!==id);
+            Storage.set('skills', skills);
+            renderSkills();
+            showNotification('Skill 已删除');
+        }
+
+        // ==================== 灵感合集 ====================
+        let inspirations = Storage.get('inspirations');
+        let selectedTag = null;
+
+        function renderInspirations() {
+            const list = document.getElementById('inspireList');
+            const filtered = selectedTag ? inspirations.filter(i => i.category===selectedTag) : inspirations;
+            list.innerHTML = filtered.map(i => `
+                <div class="inspire-card">
+                    <div class="inspire-text">${esc(i.text)}</div>
+                    <div class="inspire-meta">
+                        <span class="inspire-category">${esc(i.category)}</span>
+                        <span>${fmtDate(i.createdAt)}</span>
+                        <button class="btn btn-small btn-ghost" onclick="deleteInspiration('${i.id}')">删除</button>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('nav-inspire-count').textContent = inspirations.length;
+            document.getElementById('inspire-total').textContent = inspirations.length;
+            renderInspireStats();
+        }
+
+        function renderInspireStats() {
+            const stats = {};
+            inspirations.forEach(i => { stats[i.category] = (stats[i.category]||0)+1; });
+            const container = document.getElementById('inspire-stats');
+            container.innerHTML = Object.entries(stats).sort((a,b)=>b[1]-a[1]).map(([cat,count]) => `
+                <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+                    <span style="color:var(--text-secondary)">${esc(cat)}</span>
+                    <span style="color:var(--accent);font-weight:600">${count}</span>
+                </div>
+            `).join('');
+            const recentTags = document.getElementById('recent-tags');
+            recentTags.innerHTML = Object.keys(stats).map(tag =>
+                `<button class="quick-tag ${selectedTag===tag?'active':''}" onclick="filterInspireTag('${tag}')">${esc(tag)}</button>`
+            ).join('');
+        }
+
+        function addInspiration() {
+            const input = document.getElementById('inspireInput');
+            const text = input.value.trim();
+            if (!text) return;
+            const cat = selectedTag || autoCategorize(text);
+            inspirations.unshift({ id: uuid(), text, category: cat, createdAt: nowStr() });
+            Storage.set('inspirations', inspirations);
+            input.value = '';
+            renderInspirations();
+            showNotification('灵感已记录');
+        }
+
+        function autoCategorize(text) {
+            const map = {
+                '测试技术': ['测试','用例','case','质量','覆盖率','断言','边界','等价类'],
+                '自动化': ['自动化','auto','脚本','ci/cd','jenkins','pipeline','selenium','playwright'],
+                'Bug分析': ['bug','缺陷','根因','复现','定位','排查','日志','crash'],
+                '工具': ['工具','插件','ide','vscode','git','docker','效率'],
+                '会议': ['会议','评审','复盘','周会','讨论'],
+            };
+            const low = text.toLowerCase();
+            for (const [cat, keys] of Object.entries(map)) {
+                if (keys.some(k => low.includes(k))) return cat;
+            }
+            return '其他';
+        }
+
+        function toggleTag(btn) {
+            const tag = btn.textContent;
+            document.querySelectorAll('.quick-tags .quick-tag').forEach(t => t.classList.remove('active'));
+            if (selectedTag === tag) { selectedTag = null; }
+            else { selectedTag = tag; btn.classList.add('active'); }
+        }
+
+        function filterInspireTag(tag) {
+            selectedTag = selectedTag===tag ? null : tag;
+            renderInspirations();
+        }
+
+        function deleteInspiration(id) {
+            if (!confirm('确定删除这条灵感？')) return;
+            inspirations = inspirations.filter(x => x.id!==id);
+            Storage.set('inspirations', inspirations);
+            renderInspirations();
+            showNotification('灵感已删除');
+        }
+
+        // ==================== 云端同步 ====================
+        const CloudSync = {
+            tokenKey: 'github_gist_token',
+            gistIdKey: 'github_gist_id',
+            getToken() { return localStorage.getItem(this.tokenKey); },
+            setToken(t) { localStorage.setItem(this.tokenKey, t); },
+            getGistId() { return localStorage.getItem(this.gistIdKey); },
+            setGistId(id) { localStorage.setItem(this.gistIdKey, id); },
+            async upload() {
+                const token = this.getToken();
+                if (!token) { showNotification('同步失败', '请先配置 GitHub Token', 'error'); return; }
+                const data = { tasks, skills, inspirations, updatedAt: nowStr() };
+                const gistId = this.getGistId();
+                const url = gistId ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';
+                const method = gistId ? 'PATCH' : 'POST';
+                try {
+                    const res = await fetch(url, {
+                        method, headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ description: 'AI Workbench Sync', public: false,
+                            files: { 'workbench-data.json': { content: JSON.stringify(data, null, 2) } }
+                        })
+                    });
+                    const json = await res.json();
+                    if (!res.ok) throw new Error(json.message);
+                    if (!gistId) this.setGistId(json.id);
+                    showNotification('同步成功', '数据已上传到云端');
+                } catch (e) { showNotification('同步失败', e.message, 'error'); }
+            },
+            async download() {
+                const token = this.getToken(), gistId = this.getGistId();
+                if (!token || !gistId) { showNotification('同步失败', '请先配置 Token 和 Gist ID', 'error'); return; }
+                try {
+                    const res = await fetch(`https://api.github.com/gists/${gistId}`, { headers: { 'Authorization': `token ${token}` } });
+                    const json = await res.json();
+                    if (!res.ok) throw new Error(json.message);
+                    const data = JSON.parse(json.files['workbench-data.json'].content);
+                    if (data.tasks) { tasks = data.tasks; Storage.set('tasks', tasks); }
+                    if (data.skills) { skills = data.skills; Storage.set('skills', skills); }
+                    if (data.inspirations) { inspirations = data.inspirations; Storage.set('inspirations', inspirations); }
+                    showNotification('同步成功', '数据已从云端恢复');
+                    renderTasks(); renderSkills(); renderInspirations();
+                } catch (e) { showNotification('同步失败', e.message, 'error'); }
+            }
+        };
+
+        function saveToken() {
+            const token = document.getElementById('github-token').value.trim();
+            const gistId = document.getElementById('github-gist-id').value.trim();
+            if (!token) { showNotification('请输入 Token', 'Token 不能为空', 'error'); return; }
+            CloudSync.setToken(token);
+            if (gistId) CloudSync.setGistId(gistId);
+            showNotification('配置已保存');
+            closeModal('token-modal');
+        }
+
+        function exportData() {
+            const data = { tasks, skills, inspirations, exportedAt: nowStr() };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `workbench-${new Date().toISOString().slice(0,10)}.json`; a.click();
+            URL.revokeObjectURL(url);
+            showNotification('导出成功', '数据已下载到本地');
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file'; input.accept = '.json';
+            input.onchange = async (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                try {
+                    const data = JSON.parse(await file.text());
+                    const msg = `任务 ${(data.tasks||[]).length} 条, Skill ${(data.skills||[]).length} 条, 灵感 ${(data.inspirations||[]).length} 条`;
+                    if (!confirm(`导入将覆盖本地数据。\n${msg}\n确定继续？`)) return;
+                    if (data.tasks) { tasks = data.tasks; Storage.set('tasks', tasks); }
+                    if (data.skills) { skills = data.skills; Storage.set('skills', skills); }
+                    if (data.inspirations) { inspirations = data.inspirations; Storage.set('inspirations', inspirations); }
+                    renderTasks(); renderSkills(); renderInspirations();
+                    showNotification('导入成功', '数据已恢复');
+                } catch { showNotification('导入失败', '文件格式错误', 'error'); }
+            };
+            input.click();
+        }
+
+        // ==================== 时间显示 ====================
+        function updateTime() {
+            document.getElementById('currentTime').textContent = new Date().toLocaleString('zh-CN', {
+                month:'short', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit'
+            });
+        }
+        setInterval(updateTime, 1000); updateTime();
+
+        // ==================== 初始化 ====================
+        initSkills();
+        renderTasks();
+    </script>
+</body>
+</html>
