@@ -764,7 +764,11 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                             <div class="form-group" style="margin: 0;">
                                 <label>GitHub Personal Access Token</label>
-                                <input type="password" class="input" id="sync-token" placeholder="ghp_xxxxxxxxxxxx">
+                                <div style="position: relative;">
+                                    <input type="password" class="input" id="sync-token" placeholder="ghp_xxxxxxxxxxxx" style="padding-right: 40px;">
+                                    <button type="button" id="toggleTokenBtn" onclick="toggleTokenVisibility()" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 4px 8px; font-size: 14px;" title="显示/隐藏 Token">&#128065;</button>
+                                </div>
+                                <small style="color: var(--text-muted); display: block; margin-top: 4px;">已预填默认值，密文展示，可点击 <span style="color: var(--accent-light);">&#128065;</span> 切换明文</small>
                             </div>
                             <div class="form-group" style="margin: 0;">
                                 <label>Gist ID（可选，留空自动创建）</label>
@@ -1203,7 +1207,9 @@
             repoNameKey: 'github_repo_name',
             repoBranchKey: 'github_repo_branch',
             repoPathKey: 'github_repo_path',
-            getToken() { return localStorage.getItem(this.tokenKey); },
+            getToken() {
+                return localStorage.getItem(this.tokenKey) || '';
+            },
             setToken(t) { localStorage.setItem(this.tokenKey, t); },
             getGistId() { return localStorage.getItem(this.gistIdKey); },
             setGistId(id) { localStorage.setItem(this.gistIdKey, id); },
@@ -1359,7 +1365,16 @@
 
         // ==================== 同步配置 UI ====================
         function loadSyncConfigToUI() {
-            document.getElementById('sync-token').value = CloudSync.getToken() || '';
+            const token = CloudSync.getToken();
+            document.getElementById('sync-token').value = token;
+            // 输入框始终保持密文模式（type=password），点击眼睛切换
+            document.getElementById('sync-token').type = 'password';
+            document.getElementById('sync-token').setAttribute('data-real-value', token);
+            document.getElementById('sync-token').setAttribute('data-masked', '1');
+            document.getElementById('sync-token').value = '•'.repeat(Math.max(20, token.length));
+            document.getElementById('sync-token').style.letterSpacing = '2px';
+            document.getElementById('sync-token').style.fontFamily = 'monospace';
+            document.getElementById('sync-token').style.color = 'var(--text-muted)';
             document.getElementById('sync-gist-id').value = CloudSync.getGistId() || '';
             document.getElementById('sync-repo-owner').value = CloudSync.getRepoOwner();
             document.getElementById('sync-repo-name').value = CloudSync.getRepoName();
@@ -1367,8 +1382,39 @@
             document.getElementById('sync-repo-path').value = CloudSync.getRepoPath();
         }
 
+        function toggleTokenVisibility() {
+            const input = document.getElementById('sync-token');
+            const btn = document.getElementById('toggleTokenBtn');
+            const masked = input.getAttribute('data-masked') === '1';
+            if (masked) {
+                // 切换到明文
+                input.value = input.getAttribute('data-real-value');
+                input.type = 'text';
+                input.style.letterSpacing = 'normal';
+                input.style.color = 'var(--text-primary)';
+                input.setAttribute('data-masked', '0');
+                btn.innerHTML = '&#128064;';
+                btn.title = '隐藏 Token';
+            } else {
+                // 切换到密文
+                const real = input.getAttribute('data-real-value');
+                input.value = '•'.repeat(Math.max(20, real.length));
+                input.type = 'password';
+                input.style.letterSpacing = '2px';
+                input.style.color = 'var(--text-muted)';
+                input.setAttribute('data-masked', '1');
+                btn.innerHTML = '&#128065;';
+                btn.title = '显示 Token';
+            }
+        }
+
         function saveSyncConfig() {
-            const token = document.getElementById('sync-token').value.trim();
+            const tokenInput = document.getElementById('sync-token');
+            // 如果用户没改（仍显示密文），保留真实值不变
+            const isMasked = tokenInput.getAttribute('data-masked') === '1';
+            const token = isMasked
+                ? tokenInput.getAttribute('data-real-value')
+                : tokenInput.value.trim();
             if (!token) {
                 showNotification('请输入 Token', 'Token 不能为空', 'error');
                 return;
@@ -1529,6 +1575,23 @@
                 return;
             }
         })();
+
+        // 首次进入提示输入 Token（一次性，仅在 localStorage 中没有时）
+        (function promptInitialToken() {
+            if (!localStorage.getItem('github_gist_token')) {
+                setTimeout(() => {
+                    const t = prompt('请输入你的 GitHub Personal Access Token（仅保存在本地浏览器）：', '');
+                    if (t && t.trim()) {
+                        localStorage.setItem('github_gist_token', t.trim());
+                        showNotification('Token 已保存', '已为你预填，密文展示');
+                        if (document.getElementById('sync-page').classList.contains('active')) {
+                            loadSyncConfigToUI();
+                        }
+                    }
+                }, 500);
+            }
+        })();
+
         initSkills();
         renderTasks();
     </script>
