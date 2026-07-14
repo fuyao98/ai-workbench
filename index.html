@@ -772,11 +772,11 @@
                             </div>
                             <div class="form-group" style="margin: 0;">
                                 <label>仓库所有者 (Owner)</label>
-                                <input type="text" class="input" id="sync-repo-owner" placeholder="如: fuyao98">
+                                <input type="text" class="input" id="sync-repo-owner" value="fuyao98">
                             </div>
                             <div class="form-group" style="margin: 0;">
                                 <label>仓库名 (Repo)</label>
-                                <input type="text" class="input" id="sync-repo-name" placeholder="如: ai-workbench">
+                                <input type="text" class="input" id="sync-repo-name" value="ai-workbench">
                             </div>
                             <div class="form-group" style="margin: 0;">
                                 <label>分支 (Branch)</label>
@@ -1207,10 +1207,16 @@
             setToken(t) { localStorage.setItem(this.tokenKey, t); },
             getGistId() { return localStorage.getItem(this.gistIdKey); },
             setGistId(id) { localStorage.setItem(this.gistIdKey, id); },
-            getRepoOwner() { return localStorage.getItem(this.repoOwnerKey); },
-            setRepoOwner(v) { localStorage.setItem(this.repoOwnerKey, v); },
-            getRepoName() { return localStorage.getItem(this.repoNameKey); },
-            setRepoName(v) { localStorage.setItem(this.repoNameKey, v); },
+            getRepoOwner() {
+                const v = localStorage.getItem(this.repoOwnerKey);
+                return v && v.trim() ? v : 'fuyao98';
+            },
+            setRepoOwner(v) { localStorage.setItem(this.repoOwnerKey, v || 'fuyao98'); },
+            getRepoName() {
+                const v = localStorage.getItem(this.repoNameKey);
+                return v && v.trim() ? v : 'ai-workbench';
+            },
+            setRepoName(v) { localStorage.setItem(this.repoNameKey, v || 'ai-workbench'); },
             getRepoBranch() { return localStorage.getItem(this.repoBranchKey) || 'main'; },
             setRepoBranch(v) { localStorage.setItem(this.repoBranchKey, v); },
             getRepoPath() { return localStorage.getItem(this.repoPathKey) || 'ai-workbench.html'; },
@@ -1355,8 +1361,8 @@
         function loadSyncConfigToUI() {
             document.getElementById('sync-token').value = CloudSync.getToken() || '';
             document.getElementById('sync-gist-id').value = CloudSync.getGistId() || '';
-            document.getElementById('sync-repo-owner').value = CloudSync.getRepoOwner() || '';
-            document.getElementById('sync-repo-name').value = CloudSync.getRepoName() || '';
+            document.getElementById('sync-repo-owner').value = CloudSync.getRepoOwner();
+            document.getElementById('sync-repo-name').value = CloudSync.getRepoName();
             document.getElementById('sync-repo-branch').value = CloudSync.getRepoBranch();
             document.getElementById('sync-repo-path').value = CloudSync.getRepoPath();
         }
@@ -1384,8 +1390,8 @@
             const branch = CloudSync.getRepoBranch();
             const path = CloudSync.getRepoPath();
             const container = document.getElementById('commitHistory');
-            if (!token || !owner || !repo) {
-                container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; padding: 30px; text-align: center;">请先在配置区填写 Token、Owner、Repo 字段</div>`;
+            if (!token) {
+                container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; padding: 30px; text-align: center;">请先在配置区填写 GitHub Token</div>`;
                 document.getElementById('nav-sync-count').textContent = 0;
                 return;
             }
